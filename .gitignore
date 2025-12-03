@@ -1,40 +1,18 @@
-# 資料集相關 - 排除大檔案
-garbage-classification-dataset/*.zip
-garbage-classification-dataset/**/*.jpg
-garbage-classification-dataset/**/*.jpeg
-garbage-classification-dataset/**/*.png
-garbage-classification-dataset/**/*.JPG
-garbage-classification-dataset/**/*.JPEG
-garbage-classification-dataset/**/*.PNG
+# 環境變數
+.env
+.env.local
+.env*.local
 
-# Python 相關
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
+# 依賴
+node_modules/
+.next/
+out/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+build/
 
-# 虛擬環境
-venv/
-env/
-ENV/
-.venv
+# 日誌
+*.log
+logs/
 
 # IDE
 .vscode/
@@ -44,34 +22,11 @@ ENV/
 *~
 .DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb
-
-# 模型檔案（通常很大）
-*.h5
-*.hdf5
-*.pkl
-*.pickle
-*.pt
-*.pth
-*.onnx
-*.tflite
-*.pb
-models/
-checkpoints/
-weights/
-
-# 日誌檔案
-*.log
-logs/
+# 系統檔案
+Thumbs.db
+.DS_Store
 
 # 臨時檔案
 *.tmp
 *.temp
 .cache/
-
-# 系統檔案
-Thumbs.db
-.DS_Store
-
