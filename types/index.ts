@@ -8,6 +8,7 @@ export interface User {
 export interface AccountRecord {
   id: string;
   userId: string;
+  type: "income" | "expense";  // 收入或支出
   amount: number;
   category: string;
   description: string;

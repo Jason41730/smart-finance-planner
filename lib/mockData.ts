@@ -1,7 +1,7 @@
 import type { AccountRecord, FinancialGoal, LLMPlan } from "@/types";
 import { format, subDays, subMonths } from "date-fns";
 
-const categories = [
+const expenseCategories = [
   "飲食",
   "交通",
   "購物",
@@ -11,36 +11,95 @@ const categories = [
   "其他",
 ];
 
-const descriptions = [
-  "午餐",
-  "晚餐",
-  "早餐",
-  "咖啡",
-  "手搖飲",
-  "捷運",
-  "計程車",
-  "油費",
-  "衣服",
-  "書籍",
-  "電影",
-  "健身房",
-  "藥品",
-  "學費",
+const incomeCategories = ["薪資", "獎金", "投資", "兼職", "禮金", "其他收入"];
+
+// 描述和類別的對應關係
+const expenseItems: Array<{ description: string; category: string }> = [
+  // 飲食
+  { description: "午餐", category: "飲食" },
+  { description: "晚餐", category: "飲食" },
+  { description: "早餐", category: "飲食" },
+  { description: "咖啡", category: "飲食" },
+  { description: "手搖飲", category: "飲食" },
+  { description: "便利商店", category: "飲食" },
+  // 交通
+  { description: "捷運", category: "交通" },
+  { description: "計程車", category: "交通" },
+  { description: "油費", category: "交通" },
+  { description: "停車費", category: "交通" },
+  { description: "公車", category: "交通" },
+  // 購物
+  { description: "衣服", category: "購物" },
+  { description: "日用品", category: "購物" },
+  { description: "3C產品", category: "購物" },
+  // 娛樂
+  { description: "電影", category: "娛樂" },
+  { description: "KTV", category: "娛樂" },
+  { description: "遊戲", category: "娛樂" },
+  // 醫療
+  { description: "藥品", category: "醫療" },
+  { description: "看診", category: "醫療" },
+  // 教育
+  { description: "書籍", category: "教育" },
+  { description: "學費", category: "教育" },
+  { description: "線上課程", category: "教育" },
+  // 其他
+  { description: "健身房", category: "其他" },
+  { description: "水電費", category: "其他" },
+  { description: "電話費", category: "其他" },
+];
+
+const incomeDescriptions = [
+  "月薪",
+  "年終獎金",
+  "股票分紅",
+  "兼職收入",
+  "紅包",
+  "投資收益",
+  "副業收入",
 ];
 
 export function generateMockRecords(userId: string, count: number = 30): AccountRecord[] {
   const records: AccountRecord[] = [];
   const now = new Date();
 
-  for (let i = 0; i < count; i++) {
+  // 生成 70% 支出，30% 收入
+  const expenseCount = Math.floor(count * 0.7);
+  const incomeCount = count - expenseCount;
+
+  // 生成支出記錄
+  for (let i = 0; i < expenseCount; i++) {
     const date = subDays(now, Math.floor(Math.random() * 30));
     const amount = Math.floor(Math.random() * 2000) + 50;
-    const category = categories[Math.floor(Math.random() * categories.length)];
-    const description = descriptions[Math.floor(Math.random() * descriptions.length)];
+    // 隨機選擇一個項目，確保描述和類別匹配
+    const item = expenseItems[Math.floor(Math.random() * expenseItems.length)];
 
     records.push({
       id: crypto.randomUUID(),
       userId,
+      type: "expense",
+      amount,
+      category: item.category,
+      description: item.description,
+      source: "web" as const,
+      date,
+      createdAt: date,
+    });
+  }
+
+  // 生成收入記錄
+  for (let i = 0; i < incomeCount; i++) {
+    const date = subDays(now, Math.floor(Math.random() * 30));
+    const amount = Math.floor(Math.random() * 20000) + 5000; // 收入金額較大
+    const category =
+      incomeCategories[Math.floor(Math.random() * incomeCategories.length)];
+    const description =
+      incomeDescriptions[Math.floor(Math.random() * incomeDescriptions.length)];
+
+    records.push({
+      id: crypto.randomUUID(),
+      userId,
+      type: "income",
       amount,
       category,
       description,

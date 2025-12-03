@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { userStorage, recordsStorage, goalsStorage } from "@/lib/storage";
 import { generateMockRecords, generateMockGoals } from "@/lib/mockData";
@@ -17,13 +17,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [records, setRecords] = useState<AccountRecord[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
-  const [stats, setStats] = useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    balance: 0,
-  });
 
-  useEffect(() => {
+  const loadData = () => {
     const user = userStorage.getCurrentUser();
     if (!user) {
       router.push("/login");
@@ -47,16 +42,33 @@ export default function DashboardPage() {
 
     setRecords(userRecords);
     setGoals(userGoals);
+  };
 
-    // Calculate stats
-    const totalExpense = userRecords.reduce((sum, r) => sum + r.amount, 0);
-    const totalIncome = 0; // Mock - in real app, you'd have income records
-    setStats({
+  useEffect(() => {
+    loadData();
+
+    // 當頁面獲得焦點時重新載入數據（用戶從其他頁面返回時）
+    const handleFocus = () => {
+      loadData();
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [router]);
+
+  // 使用 useMemo 實時計算統計數據（當 records 變化時自動更新）
+  const stats = useMemo(() => {
+    const totalExpense = records
+      .filter((r) => !r.type || r.type === "expense") // 沒有 type 的舊記錄視為支出
+      .reduce((sum, r) => sum + r.amount, 0);
+    const totalIncome = records
+      .filter((r) => r.type === "income")
+      .reduce((sum, r) => sum + r.amount, 0);
+    return {
       totalIncome,
       totalExpense,
       balance: totalIncome - totalExpense,
-    });
-  }, [router]);
+    };
+  }, [records]);
 
   // Prepare chart data
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -65,20 +77,26 @@ export default function DashboardPage() {
   });
 
   const lineChartData = last7Days.map((dateStr) => {
-    const date = new Date(dateStr);
     const dayRecords = records.filter(
       (r) => format(new Date(r.date), "MM/dd") === dateStr
     );
     return {
       date: dateStr,
-      expense: dayRecords.reduce((sum, r) => sum + r.amount, 0),
+      income: dayRecords
+        .filter((r) => r.type === "income")
+        .reduce((sum, r) => sum + r.amount, 0),
+      expense: dayRecords
+        .filter((r) => !r.type || r.type === "expense") // 兼容舊記錄
+        .reduce((sum, r) => sum + r.amount, 0),
     };
   });
 
-  const categoryData = records.reduce((acc, record) => {
-    acc[record.category] = (acc[record.category] || 0) + record.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  const categoryData = records
+    .filter((r) => !r.type || r.type === "expense") // 兼容舊記錄
+    .reduce((acc, record) => {
+      acc[record.category] = (acc[record.category] || 0) + record.amount;
+      return acc;
+    }, {} as Record<string, number>);
 
   const pieChartData = Object.entries(categoryData).map(([name, value]) => ({
     name,
@@ -200,8 +218,13 @@ export default function DashboardPage() {
                         {record.category} • {formatDate(record.date)}
                       </p>
                     </div>
-                    <p className="text-lg font-semibold text-red-600">
-                      -{formatCurrency(record.amount)}
+                    <p
+                      className={`text-lg font-semibold ${
+                        record.type === "income" ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {record.type === "income" ? "+" : "-"}
+                      {formatCurrency(record.amount)}
                     </p>
                   </div>
                 ))

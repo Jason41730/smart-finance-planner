@@ -15,12 +15,14 @@ import Modal from "@/components/ui/Modal";
 import type { AccountRecord } from "@/types";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
-const categories = ["飲食", "交通", "購物", "娛樂", "醫療", "教育", "其他"];
+const expenseCategories = ["飲食", "交通", "購物", "娛樂", "醫療", "教育", "其他"];
+const incomeCategories = ["薪資", "獎金", "投資", "兼職", "禮金", "其他收入"];
 
 const recordSchema = z.object({
+  type: z.enum(["income", "expense"], { required_error: "請選擇類型" }),
   amount: z.number().min(1, "金額必須大於 0"),
   category: z.string().min(1, "請選擇類別"),
-  description: z.string().min(1, "請輸入描述"),
+  description: z.string().optional().default(""),
   date: z.string().min(1, "請選擇日期"),
 });
 
@@ -33,17 +35,24 @@ export default function RecordsPage() {
   const [editingRecord, setEditingRecord] = useState<AccountRecord | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [recordType, setRecordType] = useState<"income" | "expense">("expense");
+
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<RecordForm>({
     resolver: zodResolver(recordSchema),
     defaultValues: {
+      type: "expense",
       date: new Date().toISOString().split("T")[0],
     },
   });
+
+  const currentType = watch("type");
 
   useEffect(() => {
     const user = userStorage.getCurrentUser();
@@ -68,15 +77,19 @@ export default function RecordsPage() {
 
     if (editingRecord) {
       recordsStorage.update(editingRecord.id, {
-        ...data,
+        type: data.type,
+        amount: data.amount,
+        category: data.category,
+        description: data.description || "", // 如果沒有描述，使用空字串
         date: new Date(data.date),
       });
     } else {
       recordsStorage.create({
         userId: user.id,
+        type: data.type,
         amount: data.amount,
         category: data.category,
-        description: data.description,
+        description: data.description || "", // 如果沒有描述，使用空字串
         source: "web",
         date: new Date(data.date),
       });
@@ -90,10 +103,14 @@ export default function RecordsPage() {
 
   const handleEdit = (record: AccountRecord) => {
     setEditingRecord(record);
+    // 處理舊記錄沒有 type 字段的情況，預設為支出
+    const recordType = record.type || "expense";
+    setRecordType(recordType);
     reset({
+      type: recordType,
       amount: record.amount,
       category: record.category,
-      description: record.description,
+      description: record.description || "",
       date: new Date(record.date).toISOString().split("T")[0],
     });
     setIsModalOpen(true);
@@ -118,7 +135,7 @@ export default function RecordsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">記帳管理</h1>
-            <p className="text-gray-600 mt-1">記錄您的每一筆支出</p>
+            <p className="text-gray-600 mt-1">記錄您的每一筆收入和支出</p>
           </div>
           <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="w-5 h-5 mr-2" />
@@ -153,6 +170,15 @@ export default function RecordsPage() {
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded ${
+                          record.type === "income"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {record.type === "income" ? "收入" : "支出"}
+                      </span>
                       <p className="font-medium text-gray-900">{record.description}</p>
                       <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
                         {record.category}
@@ -163,8 +189,15 @@ export default function RecordsPage() {
                     </p>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <p className="text-lg font-semibold text-red-600">
-                      -{formatCurrency(record.amount)}
+                    <p
+                      className={`text-lg font-semibold ${
+                        record.type === "income"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {record.type === "income" ? "+" : "-"}
+                      {formatCurrency(record.amount)}
                     </p>
                     <Button
                       variant="ghost"
@@ -193,11 +226,54 @@ export default function RecordsPage() {
           onClose={() => {
             setIsModalOpen(false);
             setEditingRecord(null);
-            reset();
+            setRecordType("expense");
+            reset({
+              type: "expense",
+              date: new Date().toISOString().split("T")[0],
+            });
           }}
           title={editingRecord ? "編輯記錄" : "新增記錄"}
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                類型
+              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="expense"
+                    {...register("type")}
+                    onChange={(e) => {
+                      const value = e.target.value as "income" | "expense";
+                      setRecordType(value);
+                      setValue("type", value);
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-red-600 font-medium">支出</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="income"
+                    {...register("type")}
+                    onChange={(e) => {
+                      const value = e.target.value as "income" | "expense";
+                      setRecordType(value);
+                      setValue("type", value);
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-green-600 font-medium">收入</span>
+                </label>
+              </div>
+              {errors.type && (
+                <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
+              )}
+            </div>
+
             <Input
               label="金額"
               type="number"
@@ -215,11 +291,13 @@ export default function RecordsPage() {
                 {...register("category")}
               >
                 <option value="">請選擇類別</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
+                {(currentType === "income" ? incomeCategories : expenseCategories).map(
+                  (cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  )
+                )}
               </select>
               {errors.category && (
                 <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
@@ -227,9 +305,9 @@ export default function RecordsPage() {
             </div>
 
             <Input
-              label="描述"
+              label="描述（選填）"
               type="text"
-              placeholder="例如：午餐"
+              placeholder="例如：午餐（可留空）"
               error={errors.description?.message}
               {...register("description")}
             />
