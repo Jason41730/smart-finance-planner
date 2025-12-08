@@ -45,7 +45,7 @@ def add_expense(
     """
 
     if ts is None:
-        ts = datetime.now().isoformat(timespec="seconds")
+        ts = datetime.now().isoformat(timespec="minutes")
 
     conn = get_conn()
     c = conn.cursor()
@@ -104,6 +104,18 @@ def delete_last_expense(user_id: str):
 
     return {"ok": True, "deleted_id": last_id}
 
+def clear_expenses(user_id: str):
+    """
+    清空該使用者的所有紀錄，回傳刪除筆數。
+    """
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM expenses WHERE user_id = ?", (user_id,))
+    deleted = c.rowcount
+    conn.commit()
+    conn.close()
+    return {"ok": True, "deleted": deleted}
+
 def list_recent_expenses(user_id: str, limit: int = 5):
     """
     回傳該 user 最近幾筆紀錄（由新到舊）。
@@ -121,6 +133,22 @@ def list_recent_expenses(user_id: str, limit: int = 5):
     conn.close()
     return [dict(row) for row in rows]
 
+def list_all_expenses(user_id: str):
+    """
+    回傳該 user 所有紀錄（由舊到新）。
+    """
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, category, amount, note, ts
+        FROM expenses
+        WHERE user_id = ?
+        ORDER BY id ASC
+    """, (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 
 def print_recent_expenses(user_id: str, limit: int = 5):
     """
@@ -134,13 +162,36 @@ def print_recent_expenses(user_id: str, limit: int = 5):
     print(f"== 使用者 {user_id} 最近 {len(rows)} 筆紀錄（新→舊） ==")
     for r in rows:
         print(f"[id={r['id']}] {r['ts']}  {r['category']}  {r['amount']} 元  ({r['note']})")
+
+def print_all_expenses(user_id: str):
+    """
+    直接在 terminal 印出所有紀錄（由舊到新）。
+    """
+    rows = list_all_expenses(user_id)
+    if not rows:
+        print(f"[{user_id}] 目前沒有任何紀錄。")
+        return
+
+    print(f"== 使用者 {user_id} 全部 {len(rows)} 筆紀錄（舊→新） ==")
+    for r in rows:
+        print(f"[id={r['id']}] {r['ts']}  {r['category']}  {r['amount']} 元  ({r['note']})")
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     print("初始化資料庫...")
     init_db()
 
     test_user = "test_user_123"
     test_date = "2022-10-08"
-    test_ts = test_date + "T12:00:00"
+    test_ts = test_date + "T12:00"
 
     print("新增三筆測試資料...")
     add_expense(test_user, 50, "早餐", "豆漿燒餅", ts=test_ts)
@@ -150,7 +201,6 @@ if __name__ == "__main__":
     print("\n目前紀錄：")
     print_recent_expenses(test_user, limit=10)
 
-    from db import delete_last_expense  # 如果你有寫這個
 
     print("\n刪除最後一筆...")
     print(delete_last_expense(test_user))
@@ -161,3 +211,6 @@ if __name__ == "__main__":
     print(f"\n查詢 {test_date} 的總金額...")
     result = query_total(test_user, test_date, test_date)
     print("query_total 回傳：", result)
+    clear_expenses(test_user)
+    print_all_expenses(test_user)
+    
