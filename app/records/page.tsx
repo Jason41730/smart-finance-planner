@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { userStorage } from "@/lib/storage";
+import { useSession } from "next-auth/react";
 import { fetchRecords, createRecord, updateRecord, deleteRecord } from "@/lib/apiClient";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Layout from "@/components/layout/Layout";
@@ -57,11 +57,7 @@ export default function RecordsPage() {
   const currentType = watch("type");
 
   useEffect(() => {
-    const user = userStorage.getCurrentUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    // Session 檢查由 layout.tsx 處理
     loadRecords();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);

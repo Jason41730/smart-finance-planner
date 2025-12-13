@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { userStorage, goalsStorage } from "@/lib/storage";
+import { useSession } from "next-auth/react";
+import { goalsStorage } from "@/lib/storage";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Layout from "@/components/layout/Layout";
 import Card from "@/components/ui/Card";
@@ -26,6 +27,7 @@ type GoalForm = z.infer<typeof goalSchema>;
 
 export default function GoalsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
@@ -40,25 +42,21 @@ export default function GoalsPage() {
   });
 
   useEffect(() => {
-    const user = userStorage.getCurrentUser();
-    if (!user) {
-      router.push("/login");
-      return;
+    // Session 檢查由 layout.tsx 處理
+    if (session?.user?.id) {
+      loadGoals();
     }
-    loadGoals();
-  }, [router]);
+  }, [router, session]);
 
   const loadGoals = () => {
-    const user = userStorage.getCurrentUser();
-    if (user) {
-      const userGoals = goalsStorage.getAll(user.id);
+    if (session?.user?.id) {
+      const userGoals = goalsStorage.getAll(session.user.id);
       setGoals(userGoals);
     }
   };
 
   const onSubmit = (data: GoalForm) => {
-    const user = userStorage.getCurrentUser();
-    if (!user) return;
+    if (!session?.user?.id) return;
 
     if (editingGoal) {
       goalsStorage.update(editingGoal.id, {
@@ -67,7 +65,7 @@ export default function GoalsPage() {
       });
     } else {
       goalsStorage.create({
-        userId: user.id,
+        userId: session.user.id,
         goalName: data.goalName,
         targetAmount: data.targetAmount,
         currentSavedAmount: data.currentSavedAmount,

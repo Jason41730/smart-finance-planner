@@ -16,11 +16,7 @@ export default function PlanningPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const user = userStorage.getCurrentUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    // Session 檢查由 layout.tsx 處理
     loadLatestPlan();
   }, [router]);
 
