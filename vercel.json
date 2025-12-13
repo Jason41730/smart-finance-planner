@@ -1,15 +1,15 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "app.py",
-            "use": "@vercel/python"
-        }
-    ],
-    "routes": [
-        {
-          "src": "/(.*)", 
-          "dest": "app.py"
-        }
-    ]
+  "version": 2,
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/line/webhook",
+      "destination": "/api/line/webhook"
+    },
+    {
+      "source": "/api/upload",
+      "destination": "/api/upload"
+    }
+  ]
 }
