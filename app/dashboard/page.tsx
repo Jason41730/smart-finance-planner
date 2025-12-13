@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { userStorage, recordsStorage, goalsStorage } from "@/lib/storage";
-import { generateMockRecords, generateMockGoals } from "@/lib/mockData";
+import { userStorage, goalsStorage } from "@/lib/storage";
+import { fetchRecords } from "@/lib/apiClient";
+import { generateMockGoals } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { format, subDays } from "date-fns";
 import Layout from "@/components/layout/Layout";
@@ -18,30 +19,33 @@ export default function DashboardPage() {
   const [records, setRecords] = useState<AccountRecord[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
 
-  const loadData = () => {
+  const loadData = async () => {
     const user = userStorage.getCurrentUser();
     if (!user) {
       router.push("/login");
       return;
     }
 
-    // Initialize with mock data if empty
-    let userRecords = recordsStorage.getAll(user.id);
-    if (userRecords.length === 0) {
-      const mockRecords = generateMockRecords(user.id, 30);
-      mockRecords.forEach((record) => recordsStorage.create(record));
-      userRecords = recordsStorage.getAll(user.id);
-    }
+    try {
+      // 從 API 載入記錄（包含 LINE Bot 記錄）
+      const userRecords = await fetchRecords();
+      setRecords(userRecords);
 
-    let userGoals = goalsStorage.getAll(user.id);
-    if (userGoals.length === 0) {
-      const mockGoals = generateMockGoals(user.id);
-      mockGoals.forEach((goal) => goalsStorage.create(goal));
-      userGoals = goalsStorage.getAll(user.id);
+      // Goals 仍使用 localStorage（未來也會遷移）
+      let userGoals = goalsStorage.getAll(user.id);
+      if (userGoals.length === 0) {
+        const mockGoals = generateMockGoals(user.id);
+        mockGoals.forEach((goal) => goalsStorage.create(goal));
+        userGoals = goalsStorage.getAll(user.id);
+      }
+      setGoals(userGoals);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      // 如果 API 失敗，顯示錯誤訊息
+      if (error instanceof Error && error.message === 'Unauthorized') {
+        router.push('/login');
+      }
     }
-
-    setRecords(userRecords);
-    setGoals(userGoals);
   };
 
   useEffect(() => {
@@ -53,6 +57,7 @@ export default function DashboardPage() {
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // 使用 useMemo 實時計算統計數據（當 records 變化時自動更新）

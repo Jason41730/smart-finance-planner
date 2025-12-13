@@ -26,55 +26,61 @@ export async function saveConversationMessage(
   role: 'user' | 'assistant',
   content: string
 ): Promise<void> {
-  const db = await getDb();
-  const collection = db.collection<ConversationHistory>(COLLECTIONS.CONVERSATIONS);
+  try {
+    const db = await getDb();
+    const collection = db.collection<ConversationHistory>(COLLECTIONS.CONVERSATIONS);
 
-  const now = new Date();
-  
-  // 取得或建立對話歷史
-  const conversation = await collection.findOne({ userId });
-  
-  if (conversation) {
-    // 更新現有對話
-    const newMessage: ConversationMessage = {
-      role,
-      content,
-      timestamp: now,
-    };
+    const now = new Date();
     
-    // 只保留最近 N 輪對話
-    const updatedMessages = [...conversation.messages, newMessage]
-      .slice(-MAX_MESSAGES_PER_CONVERSATION);
+    // 取得或建立對話歷史
+    const conversation = await collection.findOne({ userId });
     
-    await collection.updateOne(
-      { userId },
-      {
-        $set: {
-          messages: updatedMessages,
-          lastUpdated: now,
-        },
-      }
-    );
-  } else {
-    // 建立新對話
-    const newConversation: ConversationHistory = {
-      userId,
-      messages: [
+    if (conversation) {
+      // 更新現有對話
+      const newMessage: ConversationMessage = {
+        role,
+        content,
+        timestamp: now,
+      };
+      
+      // 只保留最近 N 輪對話
+      const updatedMessages = [...conversation.messages, newMessage]
+        .slice(-MAX_MESSAGES_PER_CONVERSATION);
+      
+      await collection.updateOne(
+        { userId },
         {
-          role,
-          content,
-          timestamp: now,
-        },
-      ],
-      lastUpdated: now,
-      createdAt: now,
-    };
+          $set: {
+            messages: updatedMessages,
+            lastUpdated: now,
+          },
+        }
+      );
+    } else {
+      // 建立新對話
+      const newConversation: ConversationHistory = {
+        userId,
+        messages: [
+          {
+            role,
+            content,
+            timestamp: now,
+          },
+        ],
+        lastUpdated: now,
+        createdAt: now,
+      };
+      
+      await collection.insertOne(newConversation);
+    }
     
-    await collection.insertOne(newConversation);
+    // 清理舊對話（非同步，不阻塞）
+    cleanupOldConversations().catch(console.error);
+  } catch (error) {
+    // 如果 MongoDB 連線失敗，記錄錯誤但不中斷流程
+    console.error('Failed to save conversation message:', error);
+    // 不 throw，讓記帳功能可以繼續運作
   }
-  
-  // 清理舊對話（非同步，不阻塞）
-  cleanupOldConversations().catch(console.error);
 }
 
 /**
@@ -84,22 +90,28 @@ export async function getConversationHistory(
   userId: string,
   limit: number = 10
 ): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
-  const db = await getDb();
-  const collection = db.collection<ConversationHistory>(COLLECTIONS.CONVERSATIONS);
+  try {
+    const db = await getDb();
+    const collection = db.collection<ConversationHistory>(COLLECTIONS.CONVERSATIONS);
 
-  const conversation = await collection.findOne({ userId });
-  
-  if (!conversation || conversation.messages.length === 0) {
+    const conversation = await collection.findOne({ userId });
+    
+    if (!conversation || conversation.messages.length === 0) {
+      return [];
+    }
+    
+    // 只取最近 N 輪對話
+    const recentMessages = conversation.messages.slice(-limit);
+    
+    return recentMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+  } catch (error) {
+    // 如果 MongoDB 連線失敗，返回空陣列，讓記帳功能可以繼續運作
+    console.error('Failed to get conversation history:', error);
     return [];
   }
-  
-  // 只取最近 N 輪對話
-  const recentMessages = conversation.messages.slice(-limit);
-  
-  return recentMessages.map(msg => ({
-    role: msg.role,
-    content: msg.content,
-  }));
 }
 
 /**

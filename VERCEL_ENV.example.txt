@@ -3,33 +3,116 @@
 # 複製此檔案內容到 Vercel 專案設定 → Environment Variables
 # ⚠️ 不要 commit 包含實際值的檔案！
 # ============================================
+# 
+# 設定步驟：
+# 1. 在 Vercel Dashboard → 專案 → Settings → Environment Variables
+# 2. 逐一新增以下變數
+# 3. 部署完成後，更新 LINE_LOGIN_CALLBACK_URL 為實際 Vercel URL
+# 4. 重新部署
+#
+# ============================================
 
-# MongoDB
+# ============================================
+# MongoDB（必須）
+# ============================================
+# MongoDB Atlas 連線字串
+# 格式：mongodb+srv://username:password@cluster.mongodb.net/smart-finance?retryWrites=true&w=majority
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-finance?retryWrites=true&w=majority
 
-# Cloudinary
+# ============================================
+# Cloudinary（圖片上傳，必須）
+# ============================================
+# 從 Cloudinary Dashboard 取得
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# LINE Messaging API
+# ============================================
+# LINE Messaging API（LINE Bot，必須）
+# ============================================
+# 從 LINE Developers Console → Messaging API 取得
 LINE_MSG_CHANNEL_ID=your_channel_id
 LINE_MSG_CHANNEL_SECRET=your_channel_secret
 LINE_MSG_CHANNEL_ACCESS_TOKEN=your_access_token
 
-# LINE Login / LIFF
+# ============================================
+# LINE Login / LIFF（必須）
+# ============================================
+# 從 LINE Developers Console → LINE Login 取得
 LINE_LOGIN_CHANNEL_ID=your_channel_id
 LINE_LOGIN_CHANNEL_SECRET=your_channel_secret
+
+# LIFF（選填，建立 LIFF App 後填入）
 LINE_LIFF_ID=<建立 LIFF 後填入>
 NEXT_PUBLIC_LINE_LIFF_ID=<同 LINE_LIFF_ID>
 
-# OpenAI
+# LINE Login Callback URL（部署後更新）
+# 本地開發：http://localhost:3000/api/line/login/callback
+# Vercel：https://your-project.vercel.app/api/line/login/callback
+LINE_LOGIN_CALLBACK_URL=https://your-project.vercel.app/api/line/login/callback
+
+# ============================================
+# OpenAI（LLM 記帳助理，必須）
+# ============================================
+# 從 OpenAI Platform 取得 API Key
 OPENAI_API_KEY=sk-your_openai_api_key
 
 # ============================================
-# 部署後再新增的環境變數（等取得 Vercel URL 後）
+# NextAuth（Session 管理，必須）
 # ============================================
-# LINE_LOGIN_CALLBACK_URL=https://your-domain.vercel.app/api/line/login/callback
-# NEXTAUTH_URL=https://your-domain.vercel.app
+# 本地開發：
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-local-secret-key-change-this
+
+# Vercel 部署（等取得 Vercel URL 後）：
+# NEXTAUTH_URL=https://your-project.vercel.app
 # NEXTAUTH_SECRET=<產生隨機字串>
+# 產生方式：openssl rand -base64 32
+
+# ============================================
+# 管理後台（選填，僅用於除錯）
+# ============================================
+# 管理員 LINE User ID 列表（以逗號分隔）
+# 格式：U 開頭，例如 U1234567890abcdef
+# 取得方式：
+#   1. 使用 LINE Bot 發送訊息，在 webhook 中查看 event.source.userId
+#   2. 訪問 /admin 頁面，會顯示你的 LINE user_id
+# 例如：ADMIN_USER_IDS=U1234567890abcdef,U0987654321fedcba
+ADMIN_USER_IDS=
+
+# ============================================
+# 完整範例（本地開發 .env.local）
+# ============================================
+# MONGODB_URI=mongodb+srv://...
+# CLOUDINARY_CLOUD_NAME=...
+# CLOUDINARY_API_KEY=...
+# CLOUDINARY_API_SECRET=...
+# LINE_MSG_CHANNEL_ID=...
+# LINE_MSG_CHANNEL_SECRET=...
+# LINE_MSG_CHANNEL_ACCESS_TOKEN=...
+# LINE_LOGIN_CHANNEL_ID=...
+# LINE_LOGIN_CHANNEL_SECRET=...
+# LINE_LOGIN_CALLBACK_URL=http://localhost:3000/api/line/login/callback
+# OPENAI_API_KEY=sk-...
+# NEXTAUTH_URL=http://localhost:3000
+# NEXTAUTH_SECRET=local-dev-secret-key
+# ADMIN_USER_IDS=
+
+# ============================================
+# 完整範例（Vercel 部署）
+# ============================================
+# MONGODB_URI=mongodb+srv://...
+# CLOUDINARY_CLOUD_NAME=...
+# CLOUDINARY_API_KEY=...
+# CLOUDINARY_API_SECRET=...
+# LINE_MSG_CHANNEL_ID=...
+# LINE_MSG_CHANNEL_SECRET=...
+# LINE_MSG_CHANNEL_ACCESS_TOKEN=...
+# LINE_LOGIN_CHANNEL_ID=...
+# LINE_LOGIN_CHANNEL_SECRET=...
+# LINE_LOGIN_CALLBACK_URL=https://your-project.vercel.app/api/line/login/callback
+# OPENAI_API_KEY=sk-...
+# NEXTAUTH_URL=https://your-project.vercel.app
+# NEXTAUTH_SECRET=<產生的隨機字串>
+# ADMIN_USER_IDS=U1234567890abcdef
 

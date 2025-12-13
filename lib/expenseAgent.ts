@@ -25,23 +25,33 @@ const tools = [
     type: 'function' as const,
     function: {
       name: 'add_expense',
-      description: `新增一筆消費紀錄。
+      description: `新增一筆記帳記錄（收入或支出）。
 
 使用時機：
-- 使用者提供金額和消費項目，且已確認資訊正確時
+- 使用者提供金額和項目，且已確認資訊正確時
 - 使用者說「正確」、「對」、「好」、「確認」且之前提到金額時
+- 可以是收入（薪資、獎金、投資等）或支出（消費）
 
-範例：
+範例（支出）：
 - 使用者：「晚餐便當150元」→ 你：「請問是今天的晚餐嗎？類別是飲食對吧？」→ 使用者：「對」→ 呼叫此工具
-- 使用者：「午餐200元，飲食」→ 直接呼叫此工具（資訊完整）`,
+- 使用者：「午餐200元，飲食」→ 直接呼叫此工具（資訊完整）
+
+範例（收入）：
+- 使用者：「收入5000元，薪資」→ 直接呼叫此工具（type: 'income'）
+- 使用者：「今天領了獎金3000元」→ 呼叫此工具（type: 'income', category: '獎金'）`,
       parameters: {
         type: 'object',
         properties: {
           user_id: { type: 'string', description: '使用者 ID（會自動填入）' },
           amount: { type: 'number', description: '金額，必須 > 0' },
+          type: {
+            type: ['string', 'null'],
+            description: '類型：income（收入）或 expense（支出）。如果使用者說「收入」、「薪資」、「獎金」等，設為 income；如果說「記帳」、「花了」、「消費」等，設為 expense。預設為 expense',
+            enum: ['income', 'expense', null],
+          },
           category: {
             type: ['string', 'null'],
-            description: '類別：飲食、交通、購物、娛樂、醫療、教育、其他。如果無法判斷可為 null',
+            description: '類別。支出類別：飲食、交通、購物、娛樂、醫療、教育、其他。收入類別：薪資、獎金、投資、兼職、禮金、其他收入。如果無法判斷可為 null',
           },
           note: {
             type: 'string',
@@ -151,12 +161,15 @@ async function callTool(name: string, args: any): Promise<any> {
         if (!args.amount || args.amount <= 0) {
           return { ok: false, error: 'invalid_amount', message: '金額必須大於 0' };
         }
+        // 使用統一的 accountDb，支援收入與支出
+        const recordType = args.type || 'expense'; // 預設為支出
         return await addExpense(
           args.user_id,
           args.amount,
           args.category ?? null,
           args.note ?? '',
-          args.ts
+          args.ts,
+          recordType // 傳遞 type 參數
         );
       case 'query_total':
         // 驗證日期格式
@@ -259,7 +272,14 @@ export async function chat(
   userId: string = 'u1'
 ): Promise<string> {
   // 🎯 優化 4: 載入對話歷史（對話記憶）
-  const conversationHistory = await getConversationHistory(userId, 10);
+  // 如果載入失敗，繼續使用空歷史（不影響記帳功能）
+  let conversationHistory: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+  try {
+    conversationHistory = await getConversationHistory(userId, 10);
+  } catch (error) {
+    console.error('Failed to load conversation history:', error);
+    // 繼續執行，不使用對話歷史
+  }
   
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -302,15 +322,23 @@ export async function chat(
 
 ## 對話範例
 
-**範例 1：記帳流程（資訊不完整）**
+**範例 1：記帳流程（支出，資訊不完整）**
 使用者：「晚餐便當150元」
 助理：「請問是今天的晚餐嗎？類別是飲食對吧？」
 使用者：「對」
 助理：「✅ 已成功記錄：2025-12-13 晚餐 150元（便當，飲食）」
 
-**範例 2：記帳流程（資訊完整）**
+**範例 2：記帳流程（支出，資訊完整）**
 使用者：「午餐200元，飲食，咖哩飯」
 助理：「✅ 已成功記錄：2025-12-13 午餐 200元（咖哩飯，飲食）」
+
+**範例 3：記帳流程（收入）**
+使用者：「收入5000元，薪資」
+助理：「✅ 已成功記錄：2025-12-13 收入 5000元（薪資）」
+
+**範例 4：記帳流程（收入，簡短）**
+使用者：「今天領了獎金3000元」
+助理：「✅ 已成功記錄：2025-12-13 收入 3000元（獎金）」
 
 **範例 3：查詢總額**
 使用者：「今天花了多少」
@@ -352,9 +380,14 @@ export async function chat(
     if (!message.tool_calls || message.tool_calls.length === 0) {
       const reply = message.content || '抱歉，我無法理解您的需求。';
       
-      // 儲存對話歷史
-      await saveConversationMessage(userId, 'user', userText);
-      await saveConversationMessage(userId, 'assistant', reply);
+      // 儲存對話歷史 - 如果失敗不影響流程
+      try {
+        await saveConversationMessage(userId, 'user', userText);
+        await saveConversationMessage(userId, 'assistant', reply);
+      } catch (saveError) {
+        console.error('Failed to save conversation:', saveError);
+        // 不中斷流程
+      }
       
       return reply;
     }
@@ -403,9 +436,14 @@ export async function chat(
             errorMessage = result.message || '處理時發生錯誤，請稍後再試。';
         }
         
-        // 儲存對話歷史（包含錯誤）
-        await saveConversationMessage(userId, 'user', userText);
-        await saveConversationMessage(userId, 'assistant', errorMessage);
+        // 儲存對話歷史（包含錯誤）- 如果失敗不影響流程
+        try {
+          await saveConversationMessage(userId, 'user', userText);
+          await saveConversationMessage(userId, 'assistant', errorMessage);
+        } catch (saveError) {
+          console.error('Failed to save conversation:', saveError);
+          // 不中斷流程
+        }
         
         return errorMessage;
       }
@@ -436,9 +474,14 @@ export async function chat(
       finalReply = validation.improvedReply;
     }
     
-    // 儲存對話歷史
-    await saveConversationMessage(userId, 'user', userText);
-    await saveConversationMessage(userId, 'assistant', finalReply);
+    // 儲存對話歷史 - 如果失敗不影響流程
+    try {
+      await saveConversationMessage(userId, 'user', userText);
+      await saveConversationMessage(userId, 'assistant', finalReply);
+    } catch (saveError) {
+      console.error('Failed to save conversation:', saveError);
+      // 不中斷流程
+    }
     
     return finalReply;
   } catch (error) {
@@ -457,11 +500,12 @@ export async function chat(
       }
     }
     
-    // 儲存錯誤對話（如果可能）
+    // 儲存錯誤對話（如果可能）- 如果失敗不影響流程
     try {
       await saveConversationMessage(userId, 'user', userText);
       await saveConversationMessage(userId, 'assistant', errorMessage);
-    } catch {
+    } catch (saveError) {
+      console.error('Failed to save error conversation:', saveError);
       // 如果儲存失敗，忽略（避免無限迴圈）
     }
     

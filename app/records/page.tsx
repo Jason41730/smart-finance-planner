@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { userStorage, recordsStorage } from "@/lib/storage";
+import { userStorage } from "@/lib/storage";
+import { fetchRecords, createRecord, updateRecord, deleteRecord } from "@/lib/apiClient";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Layout from "@/components/layout/Layout";
 import Card from "@/components/ui/Card";
@@ -62,44 +63,51 @@ export default function RecordsPage() {
       return;
     }
     loadRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const loadRecords = () => {
-    const user = userStorage.getCurrentUser();
-    if (user) {
-      const userRecords = recordsStorage.getAll(user.id);
-      setRecords(userRecords);
+  const loadRecords = async () => {
+    try {
+      const records = await fetchRecords();
+      setRecords(records);
+    } catch (error) {
+      console.error('Failed to load records:', error);
+      // 如果 API 失敗，顯示錯誤訊息
+      if (error instanceof Error && error.message === 'Unauthorized') {
+        router.push('/login');
+      }
     }
   };
 
-  const onSubmit = (data: RecordForm) => {
-    const user = userStorage.getCurrentUser();
-    if (!user) return;
+  const onSubmit = async (data: RecordForm) => {
+    try {
+      if (editingRecord) {
+        await updateRecord(editingRecord.id, {
+          type: data.type,
+          amount: data.amount,
+          category: data.category,
+          description: data.description || "",
+          date: data.date,
+        });
+      } else {
+        await createRecord({
+          type: data.type,
+          amount: data.amount,
+          category: data.category,
+          description: data.description || "",
+          date: data.date,
+          source: 'web',
+        });
+      }
 
-    if (editingRecord) {
-      recordsStorage.update(editingRecord.id, {
-        type: data.type,
-        amount: data.amount,
-        category: data.category,
-        description: data.description || "", // 如果沒有描述，使用空字串
-        date: new Date(data.date),
-      });
-    } else {
-      recordsStorage.create({
-        userId: user.id,
-        type: data.type,
-        amount: data.amount,
-        category: data.category,
-        description: data.description || "", // 如果沒有描述，使用空字串
-        source: "web",
-        date: new Date(data.date),
-      });
+      reset();
+      setIsModalOpen(false);
+      setEditingRecord(null);
+      await loadRecords();
+    } catch (error) {
+      console.error('Failed to save record:', error);
+      alert(error instanceof Error ? error.message : '儲存失敗，請稍後再試');
     }
-
-    reset();
-    setIsModalOpen(false);
-    setEditingRecord(null);
-    loadRecords();
   };
 
   const handleEdit = (record: AccountRecord) => {
@@ -117,10 +125,15 @@ export default function RecordsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("確定要刪除此記錄嗎？")) {
-      recordsStorage.delete(id);
-      loadRecords();
+      try {
+        await deleteRecord(id);
+        await loadRecords();
+      } catch (error) {
+        console.error('Failed to delete record:', error);
+        alert(error instanceof Error ? error.message : '刪除失敗，請稍後再試');
+      }
     }
   };
 

@@ -10,12 +10,12 @@ LLM 驅動的全端智能記帳與財務規劃服務
 
 ## 技術棧
 
-- **前端框架**: Next.js 14+ (App Router) + TypeScript
-- **樣式**: Tailwind CSS
-- **表單管理**: React Hook Form + Zod
-- **數據可視化**: Recharts
-- **圖標**: Lucide React
-- **數據存儲**: localStorage (目前使用，未來將遷移至 MongoDB)
+- **前端**: Next.js 14+ (App Router) + TypeScript + Tailwind CSS
+- **後端**: Next.js API Routes + MongoDB
+- **LINE Bot**: LINE Messaging API + LIFF
+- **LLM**: OpenAI API (Function Calling)
+- **圖片**: Cloudinary
+- **部署**: Vercel
 
 ## 開發環境設置
 
@@ -42,43 +42,50 @@ npm start
 
 ## 功能特性
 
-### 已實現功能
+### 已實現
 
-- ✅ 用戶註冊/登入（使用 localStorage 模擬）
-- ✅ 記帳管理（新增、編輯、刪除記錄）
+- ✅ 用戶註冊/登入（NextAuth.js Session 管理）
+- ✅ 記帳管理（收入/支出，CRUD）
+- ✅ Dashboard 數據可視化
 - ✅ 財務目標管理
-- ✅ Dashboard 數據可視化（收支趨勢、類別比例）
-- ✅ 財務規劃頁面（使用 mock 數據）
+- ✅ LINE Bot 記帳（自然語言理解，LLM Function Calling）
+- ✅ 統一資料庫（MongoDB）
+- ✅ 網頁版與 LINE Bot 資料同步
+- ✅ LINE ↔ Web 使用者對應
+- ✅ Session 管理（NextAuth.js）
 
-### 待實現功能
+### 開發中
 
 - ⏳ MongoDB 數據庫集成
-- ⏳ Cloudinary 圖片上傳
 - ⏳ LLM API 集成（OpenAI）
-- ⏳ LINE Chatbot 集成
-- ⏳ 自然語言記帳解析
 - ⏳ 收據 OCR 識別
+- ⏳ Session 管理（取代 query parameter）
 
 ## 項目結構
 
 ```
 smart-finance-planner/
-├── app/                    # Next.js App Router 頁面
-│   ├── (auth)/            # 認證頁面組
+├── app/
+│   ├── (auth)/            # 認證頁面
+│   ├── api/               # API Routes
+│   │   ├── line/         # LINE Bot webhook
+│   │   └── records/      # 記帳 API
 │   ├── dashboard/         # 儀表板
 │   ├── records/           # 記帳管理
-│   ├── goals/             # 財務目標
-│   └── planning/          # 財務規劃
-├── components/             # React 組件
-│   ├── ui/                # 基礎 UI 組件
-│   ├── charts/            # 圖表組件
-│   └── layout/            # 布局組件
-├── lib/                   # 工具函數
-│   ├── storage.ts         # localStorage 封裝
-│   ├── mockData.ts        # Mock 數據生成
-│   └── utils.ts           # 工具函數
-└── types/                 # TypeScript 類型定義
+│   └── goals/             # 財務目標
+├── lib/
+│   ├── accountDb.ts       # 統一記帳 API
+│   ├── expenseAgent.ts    # LINE Bot LLM 邏輯
+│   ├── expenseDb.ts       # LINE Bot 向後相容層
+│   ├── userMapping.ts     # 使用者對應
+│   ├── apiClient.ts       # 前端 API Client
+│   └── mongodb.ts         # MongoDB 連線
+└── types/                 # TypeScript 類型
 ```
+
+## 環境變數
+
+詳細設定請參考 `VERCEL_ENV.example.txt`。
 
 ## 使用說明
 
@@ -91,4 +98,5 @@ smart-finance-planner/
 
 ## 開發狀態
 
-目前項目處於前端開發階段，所有功能使用 localStorage 和 mock 數據。後續將逐步集成外部 API 和服務。
+✅ 核心功能已完成（記帳、LINE Bot、資料同步、Session 管理、使用者對應）  
+⏳ 持續優化中（收據 OCR）

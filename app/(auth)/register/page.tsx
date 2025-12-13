@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { userStorage } from "@/lib/storage";
+import { signIn } from "next-auth/react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -40,34 +40,43 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setError("");
 
-    // Mock registration - save to localStorage
-    const storedUsers = localStorage.getItem("smart_finance_users");
-    const users: Array<{ email: string; password: string; id: string; name: string }> = 
-      storedUsers ? JSON.parse(storedUsers) : [];
+    try {
+      // 註冊使用者
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        }),
+      });
 
-    if (users.find((u) => u.email === data.email)) {
-      setError("此電子郵件已被註冊");
-      return;
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "註冊失敗，請稍後再試");
+        return;
+      }
+
+      // 註冊成功後自動登入
+      const signInResult = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (signInResult?.ok) {
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        setError("註冊成功，但登入失敗，請手動登入");
+      }
+    } catch (error) {
+      setError("註冊失敗，請稍後再試");
     }
-
-    const newUser = {
-      id: crypto.randomUUID(),
-      name: data.name,
-      email: data.email,
-      password: data.password, // In real app, this should be hashed
-    };
-
-    users.push(newUser);
-    localStorage.setItem("smart_finance_users", JSON.stringify(users));
-
-    userStorage.setCurrentUser({
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      createdAt: new Date(),
-    });
-
-    router.push("/dashboard");
   };
 
   return (

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { userStorage } from "@/lib/storage";
+import { signIn } from "next-auth/react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -32,24 +32,22 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setError("");
-    
-    // Mock authentication - check localStorage
-    const storedUsers = localStorage.getItem("smart_finance_users");
-    const users: Array<{ email: string; password: string; id: string; name: string }> = 
-      storedUsers ? JSON.parse(storedUsers) : [];
 
-    const user = users.find((u) => u.email === data.email && u.password === data.password);
-
-    if (user) {
-      userStorage.setCurrentUser({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        createdAt: new Date(),
+    try {
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
       });
-      router.push("/dashboard");
-    } else {
-      setError("電子郵件或密碼錯誤");
+
+      if (result?.error) {
+        setError("電子郵件或密碼錯誤");
+      } else if (result?.ok) {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (error) {
+      setError("登入失敗，請稍後再試");
     }
   };
 
@@ -86,6 +84,19 @@ export default function LoginPage() {
             {isSubmitting ? "登入中..." : "登入"}
           </Button>
         </form>
+
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              window.location.href = '/api/line/login';
+            }}
+          >
+            使用 LINE 登入
+          </Button>
+        </div>
 
         <div className="mt-6 text-center text-sm">
           <span className="text-gray-600">還沒有帳號？</span>{" "}

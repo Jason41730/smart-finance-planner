@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { userStorage } from "@/lib/storage";
-import Layout from "@/components/layout/Layout";
+import { useSession } from "next-auth/react";
 
 export default function DashboardLayout({
   children,
@@ -11,13 +10,25 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    const user = userStorage.getCurrentUser();
-    if (!user) {
+    if (status === 'unauthenticated') {
       router.push("/login");
     }
-  }, [router]);
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600">載入中...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
 
   return <>{children}</>;
 }

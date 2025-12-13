@@ -70,11 +70,23 @@ export async function POST(request: NextRequest) {
           console.error('Error processing message:', error);
           console.error('Error details:', JSON.stringify(error, null, 2));
           
-          // 回覆錯誤訊息
+          // 判斷錯誤類型，提供更友善的錯誤訊息
+          let errorMessage = '未知錯誤';
+          if (error instanceof Error) {
+            if (error.message.includes('bad auth') || error.message.includes('authentication failed')) {
+              errorMessage = '資料庫連線問題，請檢查 MONGODB_URI 環境變數';
+            } else if (error.message.includes('MongoServerError')) {
+              errorMessage = '資料庫連線失敗';
+            } else {
+              errorMessage = error.message;
+            }
+          }
+          
+          // 回覆錯誤訊息（不顯示技術細節給使用者）
           try {
             await client.replyMessage(event.replyToken, {
               type: 'text',
-              text: `記帳系統目前有點問題：${error instanceof Error ? error.message : '未知錯誤'}。晚點再試試看 QQ`,
+              text: `記帳系統目前有點問題，晚點再試試看 QQ`,
             });
           } catch (replyError) {
             console.error('Failed to send error reply:', replyError);
