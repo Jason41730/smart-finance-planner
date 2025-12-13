@@ -5,7 +5,15 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
-const options = {};
+const options = {
+  serverSelectionTimeoutMS: 30000, // 30 秒超時（增加超時時間）
+  connectTimeoutMS: 30000, // 連線超時 30 秒
+  socketTimeoutMS: 45000, // Socket 超時 45 秒
+  maxPoolSize: 10, // 最大連線池大小
+  minPoolSize: 1, // 最小連線池大小
+  retryWrites: true,
+  retryReads: true,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
@@ -45,6 +53,9 @@ export async function getDb(): Promise<Db> {
       }
       if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
         throw new Error('MongoDB 連線失敗，請檢查網路連線和 MONGODB_URI');
+      }
+      if (error.message.includes('Server selection timed out') || error.message.includes('MongoServerSelectionError')) {
+        throw new Error('MongoDB 連線超時，請檢查：1) IP 白名單設定 2) Cluster 狀態 3) MONGODB_URI 格式');
       }
     }
     throw error;
