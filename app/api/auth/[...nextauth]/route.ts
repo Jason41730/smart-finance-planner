@@ -77,13 +77,19 @@ const handler = NextAuth({
         token.lineUserId = account.providerAccountId;
       }
       
+      // 如果 token 中已有 lineUserId（從 LINE Login callback 設定的），保留它
+      if (token.lineUserId) {
+        // 保留現有的 lineUserId
+      }
+      
       return token;
     },
     async session({ session, token }: any) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
+        // 從 token.sub 或 token.id 取得 user id
+        session.user.id = (token.sub || token.id) as string;
+        session.user.email = (token.email || '') as string;
+        session.user.name = (token.name || 'User') as string;
         if (token.lineUserId) {
           (session.user as any).lineUserId = token.lineUserId as string;
         }

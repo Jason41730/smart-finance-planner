@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb, COLLECTIONS } from '@/lib/mongodb';
 import { exchangeCodeForToken, getUserProfile } from '@/lib/lineLogin';
 import { upsertUserMapping, getWebUserIdByLineUserId } from '@/lib/userMapping';
-import { signIn } from '@/app/api/auth/[...nextauth]/route';
-import bcrypt from 'bcryptjs';
+import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { encode } from 'next-auth/jwt';
 
 /**
  * LINE Login Callback
@@ -92,21 +92,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 使用 NextAuth 建立 session
-    // 注意：這裡使用 credentials provider，但實際上沒有密碼
-    // 我們需要建立一個臨時的認證方式，或者直接設定 cookie
-    // 簡化處理：使用 signIn 但需要先確保使用者有密碼或使用特殊處理
+    // 建立 NextAuth JWT session
+    // 因為 LINE Login 沒有密碼，我們需要直接建立 session token
+    const secret = process.env.NEXTAUTH_SECRET || 'your-secret-key-change-in-production';
     
-    // 方式 1：如果使用者有密碼，使用 credentials
-    // 方式 2：建立臨時 token 並設定 cookie（這裡簡化）
-    
-    // 暫時使用 redirect 帶參數，然後在前端處理登入
-    // 更好的方式是建立一個特殊的認證流程
-    const redirectUrl = new URL('/dashboard', request.url);
-    redirectUrl.searchParams.set('line_login', 'true');
-    redirectUrl.searchParams.set('user_id', webUserId);
+    // 建立 JWT token（符合 NextAuth 格式）
+    const token = await encode({
+      token: {
+        sub: webUserId, // NextAuth 使用 sub 作為 user id
+        id: webUserId,
+        email: email || '',
+        name: displayName,
+        lineUserId: lineUserId,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
+      },
+      secret,
+    });
 
-    return NextResponse.redirect(redirectUrl);
+    // 設定 NextAuth session cookie
+    // NextAuth 在生產環境使用 __Secure- 前綴，開發環境使用普通名稱
+    const cookieName = process.env.NODE_ENV === 'production' 
+      ? '__Secure-next-auth.session-token' 
+      : 'next-auth.session-token';
+    
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    response.cookies.set(cookieName, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('LINE Login callback error:', error);
     return NextResponse.redirect(new URL('/login?error=internal_error', request.url));
