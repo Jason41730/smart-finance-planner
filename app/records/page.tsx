@@ -22,7 +22,7 @@ const recordSchema = z.object({
   type: z.enum(["income", "expense"], { required_error: "請選擇類型" }),
   amount: z.number().min(1, "金額必須大於 0"),
   category: z.string().min(1, "請選擇類別"),
-  description: z.string().optional().default(""),
+  description: z.string(),
   date: z.string().min(1, "請選擇日期"),
 });
 
@@ -48,6 +48,7 @@ export default function RecordsPage() {
     resolver: zodResolver(recordSchema),
     defaultValues: {
       type: "expense",
+      description: "",
       date: new Date().toISOString().split("T")[0],
     },
   });

@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
+    if (!channelSecret) {
+      return NextResponse.json({ error: 'Channel secret not configured' }, { status: 500 });
+    }
+
     // 驗證簽章
     const hash = crypto
       .createHmac('sha256', channelSecret)

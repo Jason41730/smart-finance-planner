@@ -1,0 +1,35 @@
+# ============================================
+# Vercel 環境變數設定範本
+# 複製此檔案內容到 Vercel 專案設定 → Environment Variables
+# ⚠️ 不要 commit 包含實際值的檔案！
+# ============================================
+
+# MongoDB
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-finance?retryWrites=true&w=majority
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# LINE Messaging API
+LINE_MSG_CHANNEL_ID=your_channel_id
+LINE_MSG_CHANNEL_SECRET=your_channel_secret
+LINE_MSG_CHANNEL_ACCESS_TOKEN=your_access_token
+
+# LINE Login / LIFF
+LINE_LOGIN_CHANNEL_ID=your_channel_id
+LINE_LOGIN_CHANNEL_SECRET=your_channel_secret
+LINE_LIFF_ID=<建立 LIFF 後填入>
+NEXT_PUBLIC_LINE_LIFF_ID=<同 LINE_LIFF_ID>
+
+# OpenAI
+OPENAI_API_KEY=sk-your_openai_api_key
+
+# ============================================
+# 部署後再新增的環境變數（等取得 Vercel URL 後）
+# ============================================
+# LINE_LOGIN_CALLBACK_URL=https://your-domain.vercel.app/api/line/login/callback
+# NEXTAUTH_URL=https://your-domain.vercel.app
+# NEXTAUTH_SECRET=<產生隨機字串>
+

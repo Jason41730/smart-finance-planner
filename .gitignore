@@ -2,6 +2,7 @@
 .env
 .env.local
 .env*.local
+VERCEL_ENV.txt
 
 # 依賴
 node_modules/
