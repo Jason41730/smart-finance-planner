@@ -54,8 +54,12 @@ export async function POST(request: NextRequest) {
         }
 
         try {
+          console.log('Processing message:', { userId, userText });
+          
           // 使用 expense agent 處理訊息
           const replyText = await chat(userText, userId);
+          
+          console.log('Generated reply:', replyText);
 
           // 回覆訊息
           await client.replyMessage(event.replyToken, {
@@ -64,11 +68,17 @@ export async function POST(request: NextRequest) {
           });
         } catch (error) {
           console.error('Error processing message:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
+          
           // 回覆錯誤訊息
-          await client.replyMessage(event.replyToken, {
-            type: 'text',
-            text: '記帳系統目前有點問題，晚點再試試看 QQ',
-          });
+          try {
+            await client.replyMessage(event.replyToken, {
+              type: 'text',
+              text: `記帳系統目前有點問題：${error instanceof Error ? error.message : '未知錯誤'}。晚點再試試看 QQ`,
+            });
+          } catch (replyError) {
+            console.error('Failed to send error reply:', replyError);
+          }
         }
       }
     }
