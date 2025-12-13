@@ -66,6 +66,7 @@ const handler = NextAuth({
   },
   callbacks: {
     async jwt({ token, user, account }: any) {
+      // 如果這是新的登入（有 user 物件）
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -78,15 +79,28 @@ const handler = NextAuth({
       }
       
       // 如果 token 中已有 lineUserId（從 LINE Login callback 設定的），保留它
-      if (token.lineUserId) {
-        // 保留現有的 lineUserId
+      // 從 MongoDB 查詢 lineUserId（如果 token.sub 存在）
+      if (token.sub && !token.lineUserId) {
+        try {
+          const db = await getDb();
+          const mappingsCollection = db.collection(COLLECTIONS.USER_MAPPINGS);
+          const mapping = await mappingsCollection.findOne({
+            web_user_id: token.sub,
+          });
+          if (mapping?.line_user_id) {
+            token.lineUserId = mapping.line_user_id;
+          }
+        } catch (error) {
+          // 忽略錯誤，繼續執行
+          console.warn('Failed to fetch lineUserId:', error);
+        }
       }
       
       return token;
     },
     async session({ session, token }: any) {
       if (session.user) {
-        // 從 token.sub 或 token.id 取得 user id
+        // 從 token.sub 取得 user id（NextAuth 標準）
         session.user.id = (token.sub || token.id) as string;
         session.user.email = (token.email || '') as string;
         session.user.name = (token.name || 'User') as string;

@@ -92,40 +92,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 建立 NextAuth JWT session
-    // 因為 LINE Login 沒有密碼，我們需要直接建立 session token
-    const secret = process.env.NEXTAUTH_SECRET || 'your-secret-key-change-in-production';
+    // 使用臨時 token 方式建立 session
+    // 建立一個臨時的認證 token，然後 redirect 到中間處理頁面
+    const tempToken = crypto.randomUUID();
     
-    // 建立 JWT token（符合 NextAuth 格式）
-    const token = await encode({
-      token: {
-        sub: webUserId, // NextAuth 使用 sub 作為 user id
-        id: webUserId,
-        email: email || '',
-        name: displayName,
-        lineUserId: lineUserId,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
-      },
-      secret,
+    // 將使用者資訊暫存（可以用 Redis，這裡簡化用 MongoDB）
+    const tempTokensCollection = db.collection('tempAuthTokens');
+    await tempTokensCollection.insertOne({
+      token: tempToken,
+      userId: webUserId,
+      email: email || '',
+      name: displayName,
+      lineUserId: lineUserId,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 分鐘後過期
     });
 
-    // 設定 NextAuth session cookie
-    // NextAuth 在生產環境使用 __Secure- 前綴，開發環境使用普通名稱
-    const cookieName = process.env.NODE_ENV === 'production' 
-      ? '__Secure-next-auth.session-token' 
-      : 'next-auth.session-token';
+    // Redirect 到中間處理頁面，讓它建立 NextAuth session
+    const handlerUrl = new URL('/api/auth/line-callback-handler', request.url);
+    handlerUrl.searchParams.set('token', tempToken);
     
-    const response = NextResponse.redirect(new URL('/dashboard', request.url));
-    response.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: '/',
-    });
-
-    return response;
+    return NextResponse.redirect(handlerUrl);
   } catch (error) {
     console.error('LINE Login callback error:', error);
     return NextResponse.redirect(new URL('/login?error=internal_error', request.url));

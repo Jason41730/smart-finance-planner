@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { userStorage, goalsStorage } from "@/lib/storage";
 import { fetchRecords } from "@/lib/apiClient";
 import { generateMockGoals } from "@/lib/mockData";
@@ -16,13 +17,14 @@ import { TrendingUp, TrendingDown, DollarSign, Target } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [records, setRecords] = useState<AccountRecord[]>([]);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
 
   const loadData = async () => {
-    const user = userStorage.getCurrentUser();
-    if (!user) {
-      router.push("/login");
+    // 使用 NextAuth session
+    if (!session?.user?.id) {
+      // Session 檢查由 layout 處理，這裡只是防禦性檢查
       return;
     }
 
@@ -32,11 +34,12 @@ export default function DashboardPage() {
       setRecords(userRecords);
 
       // Goals 仍使用 localStorage（未來也會遷移）
-      let userGoals = goalsStorage.getAll(user.id);
+      const userId = session.user.id;
+      let userGoals = goalsStorage.getAll(userId);
       if (userGoals.length === 0) {
-        const mockGoals = generateMockGoals(user.id);
+        const mockGoals = generateMockGoals(userId);
         mockGoals.forEach((goal) => goalsStorage.create(goal));
-        userGoals = goalsStorage.getAll(user.id);
+        userGoals = goalsStorage.getAll(userId);
       }
       setGoals(userGoals);
     } catch (error) {
