@@ -2,6 +2,38 @@
 
 快速掌握專案核心架構與開發重點。
 
+## 專案整合歷程 (last update: 12/14)
+
+### 主要整合工作
+
+1. **資料庫統一**
+   - 建立 `accountRecords` collection 作為統一記帳記錄
+   - 實作 `userMappings` 處理 LINE ↔ Web 使用者對應
+   - 統一資料格式（camelCase、ISO 日期）
+
+2. **認證系統整合**
+   - 實作 NextAuth.js session 管理
+   - 支援 Credentials Provider（網頁註冊登入）
+   - 支援 LINE Login（LINE 用戶登入）
+   - 建立 LINE ↔ Web 使用者綁定機制
+
+3. **API 統一**
+   - 建立 `/api/records` RESTful API
+   - 統一處理來自 Web 和 LINE Bot 的記帳請求
+   - 透過 `getRelatedUserIds` 自動查詢相關使用者記錄
+
+4. **部署整合**
+   - 統一部署到 Vercel
+   - 整合所有環境變數
+   - 解決 MongoDB 連線、session 建立等問題
+
+### 架構決策
+
+- **使用者識別**：使用 `userMappings` 實現雙向綁定，而非強制單一 ID
+- **資料格式**：統一使用 `camelCase` 和 ISO 日期格式，避免技術債
+- **Session 管理**：使用 NextAuth.js JWT，取代 query parameter 方式
+- **Prompt 設計**：完全依賴 LLM 語意理解，避免關鍵字匹配
+
 ## LINE Bot
 
 - **LINE ID**: `@129sanuz`
