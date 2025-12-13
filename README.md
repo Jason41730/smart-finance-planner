@@ -17,86 +17,54 @@ LLM 驅動的全端智能記帳與財務規劃服務
 - **圖片**: Cloudinary
 - **部署**: Vercel
 
-## 開發環境設置
+## 快速開始
 
-### 安裝依賴
+### Web 應用
 
-```bash
-npm install
-```
+訪問部署網站，註冊帳號後即可開始使用。
 
-### 運行開發服務器
+### LINE Bot
 
-```bash
-npm run dev
-```
-
-打開 [http://localhost:3000](http://localhost:3000) 查看應用。
-
-### 構建生產版本
-
-```bash
-npm run build
-npm start
-```
+搜尋 LINE ID `@129sanuz`，加入好友後即可開始記帳。
 
 ## 功能特性
 
 ### 已實現
 
-- ✅ 用戶註冊/登入（NextAuth.js Session 管理）
-- ✅ 記帳管理（收入/支出，CRUD）
+- ✅ 用戶註冊/登入
+- ✅ 記帳管理（收入/支出）
 - ✅ Dashboard 數據可視化
 - ✅ 財務目標管理
-- ✅ LINE Bot 記帳（自然語言理解，LLM Function Calling）
-- ✅ 統一資料庫（MongoDB）
+- ✅ LINE Bot 記帳（自然語言理解）
 - ✅ 網頁版與 LINE Bot 資料同步
-- ✅ LINE ↔ Web 使用者對應
-- ✅ Session 管理（NextAuth.js）
+- ✅ 對話記憶（記帳上下文理解）
 
 ### 開發中
 
-- ⏳ MongoDB 數據庫集成
-- ⏳ LLM API 集成（OpenAI）
 - ⏳ 收據 OCR 識別
-- ⏳ Session 管理（取代 query parameter）
 
-## 項目結構
-
-```
-smart-finance-planner/
-├── app/
-│   ├── (auth)/            # 認證頁面
-│   ├── api/               # API Routes
-│   │   ├── line/         # LINE Bot webhook
-│   │   └── records/      # 記帳 API
-│   ├── dashboard/         # 儀表板
-│   ├── records/           # 記帳管理
-│   └── goals/             # 財務目標
-├── lib/
-│   ├── accountDb.ts       # 統一記帳 API
-│   ├── expenseAgent.ts    # LINE Bot LLM 邏輯
-│   ├── expenseDb.ts       # LINE Bot 向後相容層
-│   ├── userMapping.ts     # 使用者對應
-│   ├── apiClient.ts       # 前端 API Client
-│   └── mongodb.ts         # MongoDB 連線
-└── types/                 # TypeScript 類型
-```
-
-## 環境變數
-
-詳細設定請參考 `VERCEL_ENV.example.txt`。
 
 ## 使用說明
 
-1. **註冊帳號**: 訪問 `/register` 創建新帳號
-2. **登入**: 使用註冊的帳號登入
-3. **記帳**: 在「記帳」頁面添加您的支出記錄
-4. **設定目標**: 在「目標」頁面設定財務目標
-5. **查看分析**: 在「儀表板」查看收支趨勢和類別分析
-6. **生成規劃**: 在「財務規劃」頁面生成個人化建議
+### Web 應用
+
+1. **註冊帳號**: 創建新帳號
+2. **記帳**: 添加收入/支出記錄
+3. **設定目標**: 設定財務目標
+4. **查看分析**: Dashboard 查看收支趨勢和類別分析
+
+### LINE Bot
+
+1. **加入好友**: 搜尋 LINE ID `@129sanuz`
+2. **自然語言記帳**: 直接說「晚餐150元」、「午餐200元，飲食」等
+3. **查詢記錄**: 詢問「今天花了多少」、「最近幾筆」等
+4. **資料同步**: 與 Web 應用資料自動同步
 
 ## 開發狀態
 
-✅ 核心功能已完成（記帳、LINE Bot、資料同步、Session 管理、使用者對應）  
+✅ 核心功能已完成  
 ⏳ 持續優化中（收據 OCR）
+
+---
+
+開發者請參考 [DEV.md](./DEV.md)
