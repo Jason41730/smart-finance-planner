@@ -10,6 +10,7 @@ const options = {};
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
+// 延遲連線：只在實際需要時才連線，避免 build 時嘗試連線
 if (process.env.NODE_ENV === 'development') {
   // 開發環境：使用全域變數避免重複連線
   let globalWithMongo = global as typeof globalThis & {
@@ -18,13 +19,14 @@ if (process.env.NODE_ENV === 'development') {
 
   if (!globalWithMongo._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+    // 不立即連線，延遲到第一次使用時
+    globalWithMongo._mongoClientPromise = Promise.resolve(client).then(c => c.connect());
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
-  // 生產環境
+  // 生產環境：延遲連線
   client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  clientPromise = Promise.resolve(client).then(c => c.connect());
 }
 
 export default clientPromise;
@@ -42,6 +44,7 @@ export const COLLECTIONS = {
   FINANCIAL_GOALS: 'financialGoals',
   LLM_PLANS: 'llmPlans',
   EXPENSES: 'expenses', // LINE Bot 使用的簡化版記帳
+  CONVERSATIONS: 'conversations', // 對話歷史
 } as const;
 
 

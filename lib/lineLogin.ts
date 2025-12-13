@@ -6,7 +6,9 @@ const LINE_LOGIN_CHANNEL_ID = process.env.LINE_LOGIN_CHANNEL_ID;
 const LINE_LOGIN_CHANNEL_SECRET = process.env.LINE_LOGIN_CHANNEL_SECRET;
 const LINE_LOGIN_CALLBACK_URL =
   process.env.LINE_LOGIN_CALLBACK_URL ||
-  `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/line/login/callback`;
+  (typeof window === 'undefined' 
+    ? `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/line/login/callback`
+    : '/api/line/login/callback');
 
 if (!LINE_LOGIN_CHANNEL_ID || !LINE_LOGIN_CHANNEL_SECRET) {
   console.warn('⚠️ LINE Login 環境變數未設定');
